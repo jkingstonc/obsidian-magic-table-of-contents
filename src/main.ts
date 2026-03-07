@@ -1,8 +1,8 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin } from "obsidian";
+import { Editor, MarkdownView, Notice, Plugin } from "obsidian";
 import {
   DEFAULT_SETTINGS,
-  MagicTableOfContentsSettings as MagicTableOfContentsSettings,
-  //   SampleSettingTab,
+  MagicTableOfContentsSettings,
+  MagicTableOfContentsSettingTab,
 } from "./settings";
 
 export default class MagicTableOfContentsPlugin extends Plugin {
@@ -19,67 +19,15 @@ export default class MagicTableOfContentsPlugin extends Plugin {
       },
     });
 
-    // // This creates an icon in the left ribbon.
-    // this.addRibbonIcon("dice", "Magic Table Of Contents", (evt: MouseEvent) => {
-    //   // Called when the user clicks the icon.
-    //   new Notice("This is a notice!");
-    // });
+    this.addCommand({
+      id: "update-toc",
+      name: "Update existing table of contents",
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        this.updateToc(editor);
+      },
+    });
 
-    // // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-    // const statusBarItemEl = this.addStatusBarItem();
-    // statusBarItemEl.setText("Status bar text");
-
-    // // This adds a simple command that can be triggered anywhere
-    // this.addCommand({
-    //   id: "open-modal-simple",
-    //   name: "Open modal (simple)",
-    //   callback: () => {
-    //     new SampleModal(this.app).open();
-    //   },
-    // });
-    // // This adds an editor command that can perform some operation on the current editor instance
-    // this.addCommand({
-    //   id: "replace-selected",
-    //   name: "Replace selected content",
-    //   editorCallback: (editor: Editor, view: MarkdownView) => {
-    //     editor.replaceSelection("Sample editor command");
-    //   },
-    // });
-    // // This adds a complex command that can check whether the current state of the app allows execution of the command
-    // this.addCommand({
-    //   id: "open-modal-complex",
-    //   name: "Open modal (complex)",
-    //   checkCallback: (checking: boolean) => {
-    //     // Conditions to check
-    //     const markdownView =
-    //       this.app.workspace.getActiveViewOfType(MarkdownView);
-    //     if (markdownView) {
-    //       // If checking is true, we're simply "checking" if the command can be run.
-    //       // If checking is false, then we want to actually perform the operation.
-    //       if (!checking) {
-    //         new SampleModal(this.app).open();
-    //       }
-
-    //       // This command will only show up in Command Palette when the check function returns true
-    //       return true;
-    //     }
-    //     return false;
-    //   },
-    // });
-
-    // // This adds a settings tab so the user can configure various aspects of the plugin
-    // this.addSettingTab(new SampleSettingTab(this.app, this));
-
-    // // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-    // // Using this function will automatically remove the event listener when this plugin is disabled.
-    // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-    //   new Notice("Click");
-    // });
-
-    // // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-    // this.registerInterval(
-    //   window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000),
-    // );
+    this.addSettingTab(new MagicTableOfContentsSettingTab(this.app, this));
   }
 
   onunload() {}
@@ -97,26 +45,93 @@ export default class MagicTableOfContentsPlugin extends Plugin {
   }
 
   generateToc(editor: Editor) {
+    // Generate a table of contents at the current cursor position
+    const cursor = editor.getCursor();
+    this.generateTocAtPosition(editor, cursor);
+  }
+
+  updateToc(editor: Editor) {
+    // Update the existing table of contents
+    // The current table will be located with regex, then removed, and then re-generated
     const content = editor.getValue();
     const lines = content.split("\n");
 
-    let toc: string[] = [];
+    const tocEntryRegex = /^\s*- \[.*\]\(#.*\)$/;
+
+    // Find first contiguous block of TOC-style link entries
+    let firstEntry = -1;
+    let lastEntry = -1;
+
+    // find the very first & last table of contents entry in the page
+    // iterate through every line
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!;
+      if (tocEntryRegex.test(line)) {
+        // if this is the first entry we've seen, then set it
+        if (firstEntry === -1) {
+          firstEntry = i;
+        }
+        // set the last entry to this
+        lastEntry = i;
+      } else if (firstEntry !== -1) {
+        break;
+      }
+    }
+
+    if (firstEntry === -1) {
+      new Notice("No existing table of contents found.");
+      return;
+    }
+
+    // Expand range to include a preceding heading and a trailing ---
+    let tocStart = firstEntry;
+    let tocEnd = lastEntry;
+
+    const tocTitleRegex = /^#{1,6}\s+/;
+    if (firstEntry > 0 && tocTitleRegex.test(lines[firstEntry - 1]!)) {
+      tocStart = firstEntry - 1;
+    }
+
+    const endSeperatorRegex = /^---$/;
+    if (
+      tocEnd + 1 < lines.length &&
+      endSeperatorRegex.test(lines[tocEnd + 1]!)
+    ) {
+      tocEnd = tocEnd + 1;
+    }
+
+    // Delete the old TOC (including its trailing newline)
+    const from = { line: tocStart, ch: 0 };
+    const to =
+      tocEnd + 1 < lines.length
+        ? { line: tocEnd + 1, ch: 0 }
+        : { line: tocEnd, ch: lines[tocEnd]!.length };
+    editor.replaceRange("", from, to);
+
+    // Re-insert table of contents at the same position
+    this.generateTocAtPosition(editor, from);
+  }
+
+  private generateTocAtPosition(
+    editor: Editor,
+    position: { line: number; ch: number },
+  ) {
+    const content = editor.getValue();
+    const lines = content.split("\n");
+
     const headingRegex = /^(#{1,6})\s+(.*)/;
+    const toc: string[] = [];
 
-    for (const line of lines) {
-      const match = line.match(headingRegex);
-
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i]!.match(headingRegex);
       if (match && match[1] && match[2]) {
         const level = match[1].length;
         const title = match[2];
-
         const anchor = title
           .toLowerCase()
           .replace(/[^\w\s]/g, "")
           .replace(/\s+/g, "-");
-
         const indent = "  ".repeat(level - 1);
-
         toc.push(`${indent}- [${title}](#${anchor})`);
       }
     }
@@ -126,31 +141,14 @@ export default class MagicTableOfContentsPlugin extends Plugin {
       return;
     }
 
-    const tocBlock = `## Table of Contents
-${toc.join("\n")}
----
-`;
+    const titleText = this.settings.tocTitle.trim();
 
-    // Insert TOC where the cursor currently is
-    const cursor = editor.getCursor();
-    editor.replaceRange(tocBlock, cursor);
+    if (titleText) {
+      editor.replaceRange(`# ${titleText}\n${toc.join("\n")}\n---\n`, position);
+    } else {
+      editor.replaceRange(`${toc.join("\n")}\n---\n`, position);
+    }
 
     new Notice("Table of contents generated!");
   }
 }
-
-// class SampleModal extends Modal {
-//   constructor(app: App) {
-//     super(app);
-//   }
-
-//   onOpen() {
-//     let { contentEl } = this;
-//     contentEl.setText("Woah!");
-//   }
-
-//   onClose() {
-//     const { contentEl } = this;
-//     contentEl.empty();
-//   }
-// }

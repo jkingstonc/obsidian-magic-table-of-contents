@@ -2,37 +2,39 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import MagicTableOfContentsPlugin from "./main";
 
 export interface MagicTableOfContentsSettings {
-  mySetting: string;
+  tocTitle: string;
 }
 
 export const DEFAULT_SETTINGS: MagicTableOfContentsSettings = {
-  mySetting: "default",
+  tocTitle: "Table of Contents",
 };
 
-// export class SampleSettingTab extends PluginSettingTab {
-//   plugin: MagicTableOfContentsPlugin;
+export class MagicTableOfContentsSettingTab extends PluginSettingTab {
+  plugin: MagicTableOfContentsPlugin;
 
-//   constructor(app: App, plugin: MagicTableOfContentsPlugin) {
-//     super(app, plugin);
-//     this.plugin = plugin;
-//   }
+  constructor(app: App, plugin: MagicTableOfContentsPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
 
-//   display(): void {
-//     const { containerEl } = this;
+  display(): void {
+    const { containerEl } = this;
 
-//     containerEl.empty();
+    containerEl.empty();
 
-//     new Setting(containerEl)
-//       .setName("Settings #1")
-//       .setDesc("It's a secret")
-//       .addText((text) =>
-//         text
-//           .setPlaceholder("Enter your secret")
-//           .setValue(this.plugin.settings.mySetting)
-//           .onChange(async (value) => {
-//             this.plugin.settings.mySetting = value;
-//             await this.plugin.saveSettings();
-//           }),
-//       );
-//   }
-// }
+    new Setting(containerEl)
+      .setName("Title")
+      .setDesc(
+        "The heading displayed above the table of contents. Leave blank for no title.",
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder("Table Of Contents")
+          .setValue(this.plugin.settings.tocTitle)
+          .onChange(async (value) => {
+            this.plugin.settings.tocTitle = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+  }
+}
