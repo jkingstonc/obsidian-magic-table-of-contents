@@ -131,7 +131,9 @@ ${toc.join("\n")}
 ---
 `;
 
-    editor.replaceRange(tocBlock, { line: 0, ch: 0 });
+    // Insert TOC where the cursor currently is
+    const cursor = editor.getCursor();
+    editor.replaceRange(tocBlock, cursor);
 
     new Notice("Table of contents generated!");
   }
