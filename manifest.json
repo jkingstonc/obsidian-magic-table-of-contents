@@ -1,0 +1,11 @@
+{
+  "id": "magic-table-of-contents",
+  "name": "Magic Table Of Contents",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Generate table of contents.",
+  "author": "James Clarke",
+  "authorUrl": "https://www.jkingstonc.com",
+  "fundingUrl": "https://www.jkingstonc.com",
+  "isDesktopOnly": false
+}
