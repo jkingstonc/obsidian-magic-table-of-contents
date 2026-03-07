@@ -2,6 +2,16 @@
 
 Do you need to create a table of contents that is _just_ markdown text and not a weird code block? Look no further!
 
+## Commands
+
+### generate-toc
+
+Generates a new table of contents at the cursor position
+
+### update-toc
+
+Updates the existing table of contents. It is reccomended to use an additional plugin to bind this command to the save command so that it's automatically generated on save.
+
 ## Development Guide
 
 - Build the project `npm run build`
