@@ -37,9 +37,12 @@ function createMockEditor(content: string, cursorLine = 0, cursorCh = 0) {
   };
 }
 
-function createPlugin(tocTitle = "Table of Contents") {
+function createPlugin(
+  tocTitle = "Table of Contents",
+  linkStyle: "markdown" | "wikilink" = "markdown",
+) {
   const plugin = Object.create(MagicTableOfContentsPlugin.prototype);
-  plugin.settings = { tocTitle };
+  plugin.settings = { tocTitle, linkStyle };
   return plugin as MagicTableOfContentsPlugin;
 }
 
@@ -221,5 +224,160 @@ describe("updateToc", () => {
     expect(doc).toContain("  - [New h2](#new-h2)");
     expect(doc).toContain("    - [New h3](#new-h3)");
     expect(doc).not.toContain("Old h1");
+  });
+});
+
+describe("generateToc (wikilink style)", () => {
+  let plugin: MagicTableOfContentsPlugin;
+
+  beforeEach(() => {
+    plugin = createPlugin("Table of Contents", "wikilink");
+  });
+
+  it("generates wikilink-style TOC entries", () => {
+    const { editor, getDoc } = createMockEditor(
+      "# Introduction\n\nSome text\n\n## Getting started\n\n### Installation",
+      1,
+      0,
+    );
+
+    plugin.generateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).toContain("# Table of Contents");
+    expect(doc).toContain("- [[#Introduction]]");
+    expect(doc).toContain("  - [[#Getting started]]");
+    expect(doc).toContain("    - [[#Installation]]");
+    expect(doc).toContain("---");
+  });
+
+  it("preserves exact heading text in wikilinks (no slugification)", () => {
+    const { editor, getDoc } = createMockEditor("# Hello, World! (2024)");
+
+    plugin.generateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).toContain("- [[#Hello, World! (2024)]]");
+    expect(doc).not.toContain("#hello");
+  });
+
+  it("handles all heading levels with wikilinks", () => {
+    const { editor, getDoc } = createMockEditor(
+      "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6",
+    );
+
+    plugin.generateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).toContain("- [[#H1]]");
+    expect(doc).toContain("  - [[#H2]]");
+    expect(doc).toContain("    - [[#H3]]");
+    expect(doc).toContain("      - [[#H4]]");
+    expect(doc).toContain("        - [[#H5]]");
+    expect(doc).toContain("          - [[#H6]]");
+  });
+
+  it("generates wikilink TOC with no title when tocTitle is blank", () => {
+    plugin = createPlugin("", "wikilink");
+    const { editor, getDoc } = createMockEditor("# Hello\n\n## World", 0, 0);
+
+    plugin.generateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).not.toContain("# Table of Contents");
+    expect(doc).toContain("- [[#Hello]]");
+    expect(doc).toContain("  - [[#World]]");
+  });
+});
+
+describe("updateToc (wikilink style)", () => {
+  let plugin: MagicTableOfContentsPlugin;
+
+  beforeEach(() => {
+    plugin = createPlugin("Table of Contents", "wikilink");
+  });
+
+  it("detects and replaces an existing wikilink TOC", () => {
+    const existingDoc = [
+      "# Table of Contents",
+      "- [[#Old heading]]",
+      "---",
+      "# New heading",
+      "",
+      "Some content",
+    ].join("\n");
+
+    const { editor, getDoc } = createMockEditor(existingDoc);
+
+    plugin.updateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).not.toContain("Old heading");
+    expect(doc).toContain("- [[#New heading]]");
+    expect(doc).toContain("# Table of Contents");
+  });
+
+  it("detects and replaces nested wikilink TOC entries", () => {
+    const existingDoc = [
+      "# Table of Contents",
+      "- [[#Old h1]]",
+      "  - [[#Old h2]]",
+      "---",
+      "# New h1",
+      "## New h2",
+      "### New h3",
+    ].join("\n");
+
+    const { editor, getDoc } = createMockEditor(existingDoc);
+
+    plugin.updateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).toContain("- [[#New h1]]");
+    expect(doc).toContain("  - [[#New h2]]");
+    expect(doc).toContain("    - [[#New h3]]");
+    expect(doc).not.toContain("Old h1");
+  });
+
+  it("replaces a markdown TOC with wikilink style when setting changed", () => {
+    const existingDoc = [
+      "# Table of Contents",
+      "- [Old heading](#old-heading)",
+      "---",
+      "# New heading",
+      "",
+      "Some content",
+    ].join("\n");
+
+    const { editor, getDoc } = createMockEditor(existingDoc);
+
+    plugin.updateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).not.toContain("[Old heading](#old-heading)");
+    expect(doc).toContain("- [[#New heading]]");
+  });
+});
+
+describe("updateToc (cross-style detection)", () => {
+  it("markdown plugin detects and replaces a wikilink TOC", () => {
+    const plugin = createPlugin("Table of Contents", "markdown");
+
+    const existingDoc = [
+      "# Table of Contents",
+      "- [[#Old heading]]",
+      "---",
+      "# New heading",
+      "",
+      "Some content",
+    ].join("\n");
+
+    const { editor, getDoc } = createMockEditor(existingDoc);
+
+    plugin.updateToc(editor);
+
+    const doc = getDoc();
+    expect(doc).not.toContain("[[#Old heading]]");
+    expect(doc).toContain("- [New heading](#new-heading)");
   });
 });

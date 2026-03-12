@@ -56,7 +56,7 @@ export default class MagicTableOfContentsPlugin extends Plugin {
     const content = editor.getValue();
     const lines = content.split("\n");
 
-    const tocEntryRegex = /^\s*- \[.*\]\(#.*\)$/;
+    const tocEntryRegex = /^\s*(?:- \[.*\]\(#.*\)|- \[\[#.*\]\])$/;
 
     // Find first contiguous block of TOC-style link entries
     let firstEntry = -1;
@@ -127,12 +127,20 @@ export default class MagicTableOfContentsPlugin extends Plugin {
       if (match && match[1] && match[2]) {
         const level = match[1].length;
         const title = match[2];
-        const anchor = title
-          .toLowerCase()
-          .replace(/[^\w\s]/g, "")
-          .replace(/\s+/g, "-");
         const indent = "  ".repeat(level - 1);
-        toc.push(`${indent}- [${title}](#${anchor})`);
+
+        if (this.settings.linkStyle === "wikilink") {
+          toc.push(`${indent}- [[#${title}]]`);
+        } else if(this.settings.linkStyle === "markdown") {
+          const anchor = title
+            .toLowerCase()
+            .replace(/[^\w\s]/g, "")
+            .replace(/\s+/g, "-");
+          toc.push(`${indent}- [${title}](#${anchor})`);
+        }else{
+          new Notice("Invalid link style.");
+          return;
+        }
       }
     }
 
