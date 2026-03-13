@@ -2,6 +2,11 @@
 
 Do you need to create a table of contents that is _just_ markdown text and not a weird code block? Look no further!
 
+## Features
+- Raw text! No need for code blocks that are dynamically updated. You can share your notes with the table of contents as just plain text!
+- Supports different link styles (`markdown` & `wikilink`)
+- Create & Update existing table of contents
+
 ## Commands
 
 ### generate-toc
