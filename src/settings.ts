@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import MagicTableOfContentsPlugin from "./main";
 
 export type LinkStyle = "markdown" | "wikilink";
+const DEFAULT_TITLE = "Table of Contents";
 
 export interface MagicTableOfContentsSettings {
   tocTitle: string;
@@ -9,7 +10,7 @@ export interface MagicTableOfContentsSettings {
 }
 
 export const DEFAULT_SETTINGS: MagicTableOfContentsSettings = {
-  tocTitle: "Table of Contents",
+  tocTitle: DEFAULT_TITLE,
   linkStyle: "markdown",
 };
 
@@ -33,7 +34,7 @@ export class MagicTableOfContentsSettingTab extends PluginSettingTab {
       )
       .addText((text) =>
         text
-          .setPlaceholder("Table Of Contents")
+          .setPlaceholder(DEFAULT_TITLE)
           .setValue(this.plugin.settings.tocTitle)
           .onChange(async (value) => {
             this.plugin.settings.tocTitle = value;
@@ -44,6 +45,7 @@ export class MagicTableOfContentsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Link style")
       .setDesc(
+        // eslint-disable-next-line obsidianmd/ui/sentence-case
         "Markdown uses [title](#anchor) links. Wikilink uses [[#Heading]] links (Obsidian native style).",
       )
       .addDropdown((dropdown) =>
