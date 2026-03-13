@@ -2,6 +2,8 @@
 
 Do you need to create a table of contents that is _just_ markdown text and not a weird code block? Look no further!
 
+![Obsidian Magic Table Of Contents Usage](./Magic%20Table%20Of%20Contents.gif)
+
 ## Features
 - Raw text! No need for code blocks that are dynamically updated. You can share your notes with the table of contents as just plain text!
 - Supports different link styles (`markdown` & `wikilink`)
